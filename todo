@@ -108,10 +108,10 @@ display() {
 edit() {
     if [[ -v EDITOR ]]
     then
-        "${EDITOR} ${MY_TODO_PATH}"
+        "${EDITOR}" "${MY_TODO_PATH}"
     elif [[ -v VISUAL ]]
     then
-        "${VISUAL} ${MY_TODO_PATH}"
+        "${VISUAL}" "${MY_TODO_PATH}"
     else
         echo "Neither EDITOR nor VISUAL are set" >2&
         exit 1
