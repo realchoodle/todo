@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+
+if [[ ! -v MY_TODO_PATH ]]
+then
+    echo "\$MY_TODO_PATH is not set" >&2
+    exit 1
+fi
+
+# I got the codes below using tput and printf "%q"
+declare head_fmt done_fmt dtxt_fmt todo_fmt ttxt_fmt res_fmt
+head_fmt=$'\e[1m'       # Bold
+done_fmt=$'\e[2m\e[93m' # Dim and bright yellow
+dtxt_fmt=$'\e[2m\e[9m'  # Dim and strikethrough
+todo_fmt=$'\e[93m'      # Bright yellow
+ttxt_fmt=$'\e(B\e[m'    # Reset
+res_fmt=$'\e(B\e[m'     # Reset
+
+fmt_todo() {
+    local kind cbox item
+    kind="$1"
+    cbox="$2"
+    item="$3"
+
+    case "$kind" in
+        "done")
+            printf "%s %s\n" \
+                "${done_fmt}${cbox}${res_fmt}" \
+                "${dtxt_fmt}${item}${res_fmt}"
+            ;;
+        "todo")
+            printf "%s %s\n" \
+                "${todo_fmt}${cbox}${res_fmt}" \
+                "${ttxt_fmt}${item}${res_fmt}"
+            ;;
+        *)
+            echo "Kind '$kind' is invalid" >&2
+            exit 1
+    esac
+}
+
+fmt_head() {
+    local header
+    header="$1"
+
+    printf "%s\n" "${head_fmt}${header}${res_fmt}"
+}
+
+declare -a todo_list
+mapfile -t todo_list < <(echo "$(<"${MY_TODO_PATH}")")
+
+declare bname
+bname="${MY_TODO_PATH##*/}"
+
+print_todo() {
+    local todo_reg done_reg item_reg info_reg
+    todo_reg="^- \[[[:space:]]\]" 
+    done_reg="^- \[[[:alnum:]]\]"
+    item_reg=".*$"
+    info_reg="\(.*\)"
+
+    for line in "${todo_list[@]}"
+    do
+        if [[ "$line" =~ ($info_reg) ]]
+        then
+            line="${line//"${BASH_REMATCH[1]}"/"(details in ${bname})"}"
+        fi
+
+        if [[ "$line" =~ ($todo_reg)[[:space:]]($item_reg) ]]
+        then
+            fmt_todo "todo" "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+        fi
+
+        if [[ "$line" =~ ($done_reg)[[:space:]]($item_reg) ]]
+        then
+            fmt_todo "done" "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+        fi
+    done
+}
+
+usage() {
+    echo "Usage: $0 OPTION"
+    echo "Display or edit markdown to-do lists"
+    echo
+    echo "Options:"
+    echo "  -d, --display-list"
+    echo "    Display a list of tasks"
+    echo "    '\$MY_TODO_PATH' must be set and exported"
+    echo
+    echo "  -e, --edit-list"
+    echo "    Edit a list of tasks"
+    echo "    '\$MY_TODO_PATH' must be set and exported"
+    echo "    Either '\$VISUAL' or '\$EDITOR' must be set and exported"
+    echo
+    echo "  -h, --help"
+    echo "    Display this message and exit"
+}
+
+display() {
+    if (( ${#todo_list[@]} > 0 ))
+    then
+        fmt_head "To-Do:"
+        print_todo
+    else
+        fmt_head "$bname is empty"
+    fi
+}
+
+edit() {
+    if [[ -v EDITOR ]]
+    then
+        "${EDITOR} ${MY_TODO_PATH}"
+    elif [[ -v VISUAL ]]
+    then
+        "${VISUAL} ${MY_TODO_PATH}"
+    else
+        echo "Neither EDITOR nor VISUAL are set" >2&
+        exit 1
+    fi
+}
+
+while (( $# >= 0 ))
+do
+    case "$1" in
+        -d|--display-list)
+            display
+            exit 0
+            ;;
+        -e|--edit-list)
+            edit
+            exit 0
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "Error: Unknown option: '$1'"
+            usage >&2
+            exit 1
+    esac
+    shift
+done
