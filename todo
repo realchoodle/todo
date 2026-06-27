@@ -9,7 +9,7 @@ fi
 # I got the codes below using tput and printf "%q"
 declare head_fmt done_fmt dtxt_fmt todo_fmt ttxt_fmt res_fmt
 head_fmt=$'\e[1m'       # Bold
-done_fmt=$'\e[2m\e[92m' # Dim and bright green
+done_fmt=$'\e[2m\e[93m' # Dim and bright yellow
 dtxt_fmt=$'\e[2m\e[9m'  # Dim and strikethrough
 todo_fmt=$'\e[93m'      # Bright yellow
 ttxt_fmt=$'\e(B\e[m'    # Reset
